@@ -6,11 +6,14 @@ INVALID_STATE = (1, 1)
 TERMINATING_STATE = (3, 2)
 DISCOUNT = 0.95
 
+
 def print_grid(grid, policy, iteration):
     print("\n*** GRID STATE AFTER " + str(iteration) + " ITERATIONS: \n")
     for y in reversed(range(0, NY)):
         for x in range(0, NX):
-            print(" |(" + str(x) + "," + str(y) + ")=" + ("%.2f" % grid[x + y * NX]) + ": '" + policy[x + y * NX] + "' |", end="")
+            print(
+                " |(" + str(x) + "," + str(y) + ")=" + ("%.2f" % grid[x + y * NX]) + ": '" + policy[x + y * NX] + "' |",
+                end="")
         print("\n")
     print("***")
 
@@ -36,7 +39,6 @@ def reward(index):
 def value_iteration(grid, policy):
     next_grid = [0 for i in range(NX * NY)]
 
-
     for i in range(NX * NY):
         x = i % NX
         y = int(i / NX)
@@ -59,13 +61,15 @@ def value_iteration(grid, policy):
                 south_action = 0.8 * (reward(south) + DISCOUNT * grid[south]) + (
                     0.1 * (reward(east) + DISCOUNT * grid[east]) + 0.1 * (reward(west) + DISCOUNT * grid[west]))
 
-                best_action = max([(west_action, "west"), (east_action, "east"), (north_action, "north"), (south_action, "south")], key=itemgetter(0))
+                best_action = max(
+                    [(west_action, "west"), (east_action, "east"), (north_action, "north"), (south_action, "south")],
+                    key=itemgetter(0))
 
             else:
                 best_action = (1.0 * (reward(0) + DISCOUNT * grid[0]), "To start")
 
-            next_grid[i] = best_action[0];
-            policy[i] = best_action[1];
+            next_grid[i] = best_action[0]
+            policy[i] = best_action[1]
 
     return next_grid
 
