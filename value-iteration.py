@@ -1,14 +1,16 @@
+from operator import itemgetter
+
 NX = 4
 NY = 3
 INVALID_STATE = (1, 1)
 TERMINATING_STATE = (3, 2)
 DISCOUNT = 0.95
 
-def print_grid(grid, iteration):
+def print_grid(grid, policy, iteration):
     print("\n*** GRID STATE AFTER " + str(iteration) + " ITERATIONS: \n")
     for y in reversed(range(0, NY)):
         for x in range(0, NX):
-            print(" |(" + str(x) + "," + str(y) + ")=" + ("%.2f" % grid[x + y * NX]) + "|", end="")
+            print(" |(" + str(x) + "," + str(y) + ")=" + ("%.2f" % grid[x + y * NX]) + ": '" + policy[x + y * NX] + "' |", end="")
         print("\n")
     print("***")
 
@@ -31,8 +33,9 @@ def reward(index):
         return 0
 
 
-def value_iteration(grid):
+def value_iteration(grid, policy):
     next_grid = [0 for i in range(NX * NY)]
+
 
     for i in range(NX * NY):
         x = i % NX
@@ -56,28 +59,31 @@ def value_iteration(grid):
                 south_action = 0.8 * (reward(south) + DISCOUNT * grid[south]) + (
                     0.1 * (reward(east) + DISCOUNT * grid[east]) + 0.1 * (reward(west) + DISCOUNT * grid[west]))
 
-                best_action = max([west_action, east_action, north_action, south_action])
-            else:
-                best_action = 1.0 * (reward(0) + DISCOUNT * grid[0])
+                best_action = max([(west_action, "west"), (east_action, "east"), (north_action, "north"), (south_action, "south")], key=itemgetter(0))
 
-            next_grid[i] = best_action;
+            else:
+                best_action = (1.0 * (reward(0) + DISCOUNT * grid[0]), "To start")
+
+            next_grid[i] = best_action[0];
+            policy[i] = best_action[1];
 
     return next_grid
 
 
 def main():
     grid = [0 for i in range(NX * NY)]
+    policy = ["" for i in range(NX * NY)]
     convergence = False
     iteration = 0
 
     while not convergence:
         iteration += 1
-        grid = value_iteration(grid)
+        grid = value_iteration(grid, policy)
 
-        if iteration >= 10000:
+        if iteration >= 1000:
             convergence = True
 
-    print_grid(grid, iteration)
+    print_grid(grid, policy, iteration)
 
 
 if __name__ == "__main__":
