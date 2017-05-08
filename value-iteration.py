@@ -10,13 +10,13 @@ GAMMA = 0.95
 Q_LAMBDA = 0.01
 
 
-def print_grid(grid, policy, iteration, title):
+def print_grid(grid, policy, iteration, title, precision=2):
     print("\n*** " + title + " ***")
     print("*** GRID STATE AFTER " + str(iteration) + " ITERATIONS: \n")
     for y in reversed(range(0, NY)):
         for x in range(0, NX):
             print(
-                " |(" + str(x) + "," + str(y) + ")=" + ("%.2f" % grid[x + y * NX]) + ": '" + policy[x + y * NX] + "' |",
+                " | (" + str(x) + "," + str(y) + ")=" + str(round(grid[x + y * NX], precision)) + ": '" + policy[x + y * NX] + "' |",
                 end="")
         print("\n")
     print("*** END OF " + title)
@@ -29,7 +29,7 @@ def print_q_learning(Q, iteration):
         for a in range(0, 4):
             for x in range(0, NX):
                 print(
-                    " | (" + str(x) + "," + str(y) + ")=" + ("%.2f" % Q[x + a + y * NX]) + ": '" + str(
+                    " | (" + str(x) + "," + str(y) + ")=" + ("%.2f" % Q[a + x * 4 + y * NX*4]) + ": '" + str(
                         actions[a]) + "' |", end="")
             print("\n")
         print("\n")
@@ -93,6 +93,8 @@ def q_learning(q):
     # contain the values of each of the four actions (north, east, south, west)
 
     next_q = copy.deepcopy(q)
+
+
 
     for i in range(NX * NY):
         x = i % NX
@@ -196,20 +198,36 @@ def extract_q_learning_policy(q):
     return grid, policy
 
 
+def has_converged(grid, other_grid, precision):
+    for i in range(NX*NY):
+        if round(grid[i],precision) != round(other_grid[i], precision):
+            return False
+    return True
+
+def policy_has_converged(policy, other_policy):
+    for i in range(NX*NY):
+        if policy[i] != other_policy[i]:
+            return False
+    return True
+
+
 def main():
     grid = [0 for i in range(NX * NY)]
+    next_grid = [0 for i in range(NX * NY)]
     policy = ["" for i in range(NX * NY)]
     convergence = False
     iteration = 0
 
     while not convergence:
         iteration += 1
-        grid = value_iteration(grid, policy)
+        next_grid = value_iteration(grid, policy)
 
-        if iteration >= 1000:
+        if has_converged(grid, next_grid, 3):
             convergence = True
+        else:
+            grid = copy.deepcopy(next_grid)
 
-    print_grid(grid, policy, iteration, "VALUE ITERATION")
+    print_grid(grid, policy, iteration, "VALUE ITERATION", 3)
 
     q = [0 for i in range(NX * NY * 4)]
 
@@ -219,15 +237,15 @@ def main():
     while not convergence:
         iteration += 1
         q = q_learning(q)
+        q_grid, q_policy = extract_q_learning_policy(q)
 
-        #print_q_learning(q_grid, iteration)
 
-        if iteration >= 10000:
+        if has_converged(grid, q_grid, 1) or iteration >= 10000:
             convergence = True
 
-    q_grid, q_policy = extract_q_learning_policy(q)
-    print_grid(q_grid, q_policy, iteration, "Q-LEARNING")
 
+    print_grid(q_grid, q_policy, iteration, "Q-LEARNING")
+    print_q_learning(q, iteration)
 
 if __name__ == "__main__":
     main()
