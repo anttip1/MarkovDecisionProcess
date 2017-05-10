@@ -1,6 +1,7 @@
 from operator import itemgetter
 import random
 import copy
+import math
 
 NX = 4
 NY = 3
@@ -87,19 +88,13 @@ def value_iteration(grid, policy):
     return next_grid
 
 
-def q_learning(q):
-
+def q_learning(q, q_sum_of_rewards, q_tries):
     # q-learning grid has the dimensions of NX*NY*4, every state has four slots that
     # contain the values of each of the four actions (north, east, south, west)
-
-    next_q = copy.deepcopy(q)
-
-
-
+    #next_q = copy.deepcopy(q)
     for i in range(NX * NY):
         x = i % NX
         y = int(i / NX)
-
         if not is_invalid_state(x, y):
             if not (x, y) == TERMINATING_STATE:
 
@@ -107,72 +102,66 @@ def q_learning(q):
                 east = i if is_invalid_state(x + 1, y) else i + 1
                 south = i if is_invalid_state(x, y - 1) else i - NX
                 west = i if is_invalid_state(x - 1, y) else i - 1
-
                 # We need this because the size of q was NX*4*NY
                 s = i * 4
 
-                # North value Q(s, "north")
-                north_action = q[s + 0]
-                # East value Q(s, "east")
-                east_action = q[s + 1]
-                # South value Q(s, "south")
-                south_action = q[s + 2]
-                # West value Q(s, "west")
-                west_action = q[s + 3]
-
-
-                if (random.uniform(0, 1) >= 0.95):
-                    # 5 % chance of taking the action randomly.
-                    chosen_action = random.choice(
-                        [(west_action, 3), (east_action, 1), (north_action, 0), (south_action, 2)])
+                if q_tries[s+0] == 0:
+                    chosen_action = 0
+                elif q_tries[s+1] == 0:
+                    chosen_action = 1
+                elif q_tries[s+2] == 0:
+                    chosen_action = 2
+                elif q_tries[s+3] == 0:
+                    chosen_action = 3
                 else:
-                    # 95 % chance of taking the action with largest Q-value.
-                    chosen_action = max([(west_action, 3), (east_action, 1), (north_action, 0), (south_action, 2)],
-                                        key=itemgetter(0))
+                    north_action_value = q_sum_of_rewards[s+0]/q_tries[s+0] + math.sqrt((math.log(2*sum(q_tries[s:s+3])))/q_tries[s+0])
+                    east_action_value = q_sum_of_rewards[s+1]/q_tries[s+1] + math.sqrt((math.log(2*sum(q_tries[s:s+3])))/q_tries[s+1])
+                    south_action_value = q_sum_of_rewards[s+1]/q_tries[s+2] + math.sqrt((math.log(2*sum(q_tries[s:s+3])))/q_tries[s+2])
+                    west_action_value = q_sum_of_rewards[s+1]/q_tries[s+3] + math.sqrt((math.log(2*sum(q_tries[s:s+3])))/q_tries[s+3])
+                    chosen_action = max([(north_action_value, 0), (east_action_value, 1), (south_action_value, 2), (west_action_value, 3)], key=itemgetter(0))[1]
 
-                if chosen_action[1] == 0:
+                if chosen_action == 0:
                     # North
                     # The successor state s' = s1
                     s1 = north * 4
                     i1 = north
-
-                elif chosen_action[1] == 1:
+                elif chosen_action == 1:
                     # East
                     # The successor state s' = s1
                     s1 = east * 4
                     i1 = east
-
-                elif chosen_action[1] == 2:
+                elif chosen_action == 2:
                     # South
                     # The successor state s' = s1
                     s1 = south * 4
                     i1 = south
-
-                elif chosen_action[1] == 3:
+                elif chosen_action == 3:
                     # West
                     # The successor state s' = s1
                     s1 = west * 4
                     i1 = west
-
                 # Best action from the successor statet:
                 # max ( Q(s', north), Q(s', east), Q(s', south), Q(s', west))
                 s1_max_action = max([q[s1 + 0], q[s1 + 1], q[s1 + 2], q[s1 + 3]])
-
                 # The q-learning update function:
                 # Q(s, a) = (1-lambda)Q(s,a) + lambda(R(s,a,s') + gamma*max(Q(s',a)))
-                next_q[s + chosen_action[1]] = (1 - Q_LAMBDA) * chosen_action[0] + Q_LAMBDA*(reward(i1) + GAMMA * s1_max_action)
+
+                temp = (1 - Q_LAMBDA) * q[s + chosen_action] + Q_LAMBDA*(reward(i1) + GAMMA * s1_max_action)
+                q[s + chosen_action] = temp
+                q_sum_of_rewards[s + chosen_action] += temp
+                q_tries[s + chosen_action] += 1
 
 
             else:
                 # This is for the terminal state
                 s = i * 4
                 s1_max_action = max([q[0 + 0], q[0 + 1], q[0 + 2], q[0 + 3]])
-                next_q[s + 0] = (1 - Q_LAMBDA) * q[s + 0] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
-                next_q[s + 1] = (1 - Q_LAMBDA) * q[s + 1] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
-                next_q[s + 2] = (1 - Q_LAMBDA) * q[s + 2] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
-                next_q[s + 3] = (1 - Q_LAMBDA) * q[s + 3] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
+                q[s + 0] = (1 - Q_LAMBDA) * q[s + 0] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
+                q[s + 1] = (1 - Q_LAMBDA) * q[s + 1] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
+                q[s + 2] = (1 - Q_LAMBDA) * q[s + 2] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
+                q[s + 3] = (1 - Q_LAMBDA) * q[s + 3] + Q_LAMBDA*(reward(0) + GAMMA * s1_max_action)
 
-    return next_q
+    #return next_q
 
 
 def extract_q_learning_policy(q):
@@ -230,17 +219,17 @@ def main():
     print_grid(grid, policy, iteration, "VALUE ITERATION", 3)
 
     q = [0 for i in range(NX * NY * 4)]
+    q_sum_of_rewards = [0 for i in range(NX*NY*4)]
+    q_tries = [0 for i in range(NX*NY*4)]
 
     convergence = False
     iteration = 0
 
     while not convergence:
         iteration += 1
-        q = q_learning(q)
+        q_learning(q, q_sum_of_rewards, q_tries)
         q_grid, q_policy = extract_q_learning_policy(q)
-
-
-        if has_converged(grid, q_grid, 1) or iteration >= 10000:
+        if has_converged(grid, q_grid, 1) or iteration >= 100000:
             convergence = True
 
 
